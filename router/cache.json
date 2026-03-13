@@ -1,0 +1,21 @@
+{
+  "good": [
+    "WhiteRabbitNeo:claude-opus-4.6",
+    "CachedSearch:claude-opus-4.6",
+    "PollinationsAI:gpt-5.4",
+    "Yqcloud:gpt-5.4",
+    "Yqcloud:gpt-5.4",
+    "Yqcloud:gpt-5.4",
+    "Yqcloud:claude-opus-4.6",
+    "Yqcloud:gpt-5.4",
+    "Yqcloud:claude-opus-4.6",
+    "Yqcloud:gpt-5.4",
+    "Yqcloud:gpt-5.4",
+    "Yqcloud:claude-opus-4.6",
+    "Yqcloud:gpt-5.4",
+    "Yqcloud:gpt-5.4",
+    "Yqcloud:claude-opus-4.6",
+    "Yqcloud:gpt-5.4"
+  ],
+  "bad": []
+}

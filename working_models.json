@@ -1,0 +1,134 @@
+[
+  {
+    "provider": "AnyProvider",
+    "model": "claude-opus-4.6"
+  },
+  {
+    "provider": "ApiAirforce",
+    "model": "claude-opus-4.6"
+  },
+  {
+    "provider": "ApiAirforce",
+    "model": "claude.opus.4.6"
+  },
+  {
+    "provider": "CachedSearch",
+    "model": "claude-opus-4.6"
+  },
+  {
+    "provider": "CachedSearch",
+    "model": "claude_opus_4_6"
+  },
+  {
+    "provider": "CachedSearch",
+    "model": "claude.opus.4.6"
+  },
+  {
+    "provider": "CachedSearch",
+    "model": "gpt-5.4"
+  },
+  {
+    "provider": "CachedSearch",
+    "model": "gpt_5_4"
+  },
+  {
+    "provider": "CachedSearch",
+    "model": "gpt.5.4"
+  },
+  {
+    "provider": "PollinationsAI",
+    "model": "claude-opus-4.6"
+  },
+  {
+    "provider": "PollinationsAI",
+    "model": "claude_opus_4_6"
+  },
+  {
+    "provider": "PollinationsAI",
+    "model": "claude.opus.4.6"
+  },
+  {
+    "provider": "PollinationsAI",
+    "model": "gpt-5.4"
+  },
+  {
+    "provider": "PollinationsAI",
+    "model": "gpt_5_4"
+  },
+  {
+    "provider": "PollinationsAI",
+    "model": "gpt.5.4"
+  },
+  {
+    "provider": "Qwen_Qwen_3",
+    "model": "claude-opus-4.6"
+  },
+  {
+    "provider": "Qwen_Qwen_3",
+    "model": "claude_opus_4_6"
+  },
+  {
+    "provider": "Qwen_Qwen_3",
+    "model": "claude.opus.4.6"
+  },
+  {
+    "provider": "Qwen_Qwen_3",
+    "model": "gpt-5.4"
+  },
+  {
+    "provider": "Qwen_Qwen_3",
+    "model": "gpt_5_4"
+  },
+  {
+    "provider": "Qwen_Qwen_3",
+    "model": "gpt.5.4"
+  },
+  {
+    "provider": "WhiteRabbitNeo",
+    "model": "claude-opus-4.6"
+  },
+  {
+    "provider": "WhiteRabbitNeo",
+    "model": "claude_opus_4_6"
+  },
+  {
+    "provider": "WhiteRabbitNeo",
+    "model": "claude.opus.4.6"
+  },
+  {
+    "provider": "WhiteRabbitNeo",
+    "model": "gpt-5.4"
+  },
+  {
+    "provider": "WhiteRabbitNeo",
+    "model": "gpt_5_4"
+  },
+  {
+    "provider": "WhiteRabbitNeo",
+    "model": "gpt.5.4"
+  },
+  {
+    "provider": "Yqcloud",
+    "model": "claude-opus-4.6"
+  },
+  {
+    "provider": "Yqcloud",
+    "model": "claude_opus_4_6"
+  },
+  {
+    "provider": "Yqcloud",
+    "model": "claude.opus.4.6"
+  },
+  {
+    "provider": "Yqcloud",
+    "model": "gpt-5.4"
+  },
+  {
+    "provider": "Yqcloud",
+    "model": "gpt_5_4"
+  },
+  {
+    "provider": "Yqcloud",
+    "model": "gpt.5.4"
+  }
+]

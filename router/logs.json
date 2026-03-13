@@ -1,0 +1,58 @@
+[
+  {
+    "model": "Yqcloud:claude-opus-4.6",
+    "response": "Hello! How can I assist you today?",
+    "latency": 1.674990177154541,
+    "length": 34,
+    "score": 20.29862650165442
+  },
+  {
+    "model": "Yqcloud:gpt-5.4",
+    "response": "Hello! How are you doing today? Is there something I can help you with?",
+    "latency": 2.722505807876587,
+    "length": 71,
+    "score": 26.07891589967858
+  },
+  {
+    "model": "Yqcloud:gpt-5.4",
+    "response": "Hello! How can I assist you today?",
+    "latency": 1.4648239612579346,
+    "length": 34,
+    "score": 23.210980226458137
+  },
+  {
+    "model": "Yqcloud:claude-opus-4.6",
+    "response": "Hello! How can I assist you today?",
+    "latency": 2.2148189544677734,
+    "length": 34,
+    "score": 15.35114187614052
+  },
+  {
+    "model": "Yqcloud:gpt-5.4",
+    "response": "Hello! How can I assist you today?",
+    "latency": 1.7903177738189697,
+    "length": 34,
+    "score": 18.991041979923924
+  },
+  {
+    "model": "Yqcloud:gpt-5.4",
+    "response": "Hey! How's it going?",
+    "latency": 3.714545726776123,
+    "length": 20,
+    "score": 5.384238469816368
+  },
+  {
+    "model": "Yqcloud:claude-opus-4.6",
+    "response": "Hey there! \ud83d\ude04 How\u2019s your day going?",
+    "latency": 2.4112300872802734,
+    "length": 34,
+    "score": 14.100686690729715
+  },
+  {
+    "model": "Yqcloud:gpt-5.4",
+    "response": "Hey, how\u2019s it going?",
+    "latency": 2.6116201877593994,
+    "length": 20,
+    "score": 7.658081406224196
+  }
+]
