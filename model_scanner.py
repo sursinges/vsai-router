@@ -2,74 +2,61 @@ import g4f
 import json
 import re
 
-# паттерны нужных моделей
 PATTERNS = {
-
-"claude_opus_4_6": re.compile(
-r"claude[^a-zA-Z0-9]*opus[^a-zA-Z0-9]*4[^a-zA-Z0-9]*6",
-re.IGNORECASE
-),
-
-"gpt_5_4": re.compile(
-r"gpt[^a-zA-Z0-9]*5[^a-zA-Z0-9]*4",
-re.IGNORECASE
-)
-
+    "claude": re.compile(r"claude[^a-zA-Z0-9]*opus[^a-zA-Z0-9]*4[^a-zA-Z0-9]*6", re.I),
+    "gpt": re.compile(r"gpt[^a-zA-Z0-9]*5[^a-zA-Z0-9]*4", re.I),
 }
 
-providers = [p for p in dir(g4f.Provider) if not p.startswith("_")]
+TEST_MODELS = [
+    "claude-opus-4.6",
+    "claude_opus_4_6",
+    "claude.opus.4.6",
+    "gpt-5.4",
+    "gpt_5_4",
+    "gpt.5.4"
+]
 
-print("providers:", len(providers))
+providers = [
+    p for p in dir(g4f.Provider)
+    if not p.startswith("_")
+]
 
 working = []
 
-TEST_MODELS = [
-
-"claude-opus-4.6",
-"claude_opus_4_6",
-"claude.opus.4.6",
-"gpt-5.4",
-"gpt_5_4",
-"gpt.5.4"
-
-]
+print("providers:", len(providers))
 
 for provider_name in providers:
 
     provider = getattr(g4f.Provider, provider_name)
 
-    for test_model in TEST_MODELS:
+    # пропускаем search providers
+    if "Search" in provider_name:
+        continue
+
+    for model in TEST_MODELS:
 
         try:
 
             r = g4f.ChatCompletion.create(
-                model=test_model,
+                model=model,
                 provider=provider,
-                messages=[{"role":"user","content":"hello"}],
+                messages=[{"role": "user", "content": "hello"}],
                 timeout=12
             )
 
-            if r:
+            if r and len(str(r)) > 5:
 
-                model_name = test_model
+                print("FOUND:", provider_name, model)
 
-                for key, pattern in PATTERNS.items():
-
-                    if pattern.search(model_name):
-
-                        print("FOUND:", provider_name, model_name)
-
-                        working.append({
-                            "provider": provider_name,
-                            "model": model_name
-                        })
+                working.append({
+                    "provider": provider_name,
+                    "model": model
+                })
 
         except:
             pass
 
-
-with open("working_models.json","w") as f:
-
-    json.dump(working,f,indent=2)
+with open("working_models.json", "w") as f:
+    json.dump(working, f, indent=2)
 
 print("saved:", len(working))
