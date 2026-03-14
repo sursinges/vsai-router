@@ -1,0 +1,21 @@
+{
+  "coding": {
+    "temperature": 0.2,
+    "system": "You are a precise coding assistant."
+  },
+
+  "reasoning": {
+    "temperature": 0.5,
+    "system": "You are a reasoning assistant. Explain step by step."
+  },
+
+  "translation": {
+    "temperature": 0.3,
+    "system": "Translate accurately without extra commentary."
+  },
+
+  "chat": {
+    "temperature": 0.7,
+    "system": "You are a friendly assistant."
+  }
+}

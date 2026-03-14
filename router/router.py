@@ -6,13 +6,15 @@ import os
 import time
 import re
 
-
-
 BASE_DIR = os.path.dirname(__file__)
 
 LOG_FILE = os.path.join(BASE_DIR, "logs.json")
 CACHE_FILE = os.path.join(BASE_DIR, "cache.json")
-MODELS_FILE = "working_models.json"
+MODELS_FILE = os.path.join(BASE_DIR, "working_models.json")
+HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
+
+BATCH_SIZE = 4
+TIMEOUT = 60
 
 MODEL_PATTERNS = [
 
@@ -25,12 +27,39 @@ r"gpt[^a-z0-9]*5[^a-z0-9]*3",
 r"gpt[^a-z0-9]*5"
 ]
 
+
+def load_history():
+
+    if not os.path.exists(HISTORY_FILE):
+        return {}
+
+    with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_history(history):
+
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(history, f, indent=2)
+
+
+def load_skill_configs():
+
+    path = os.path.join(BASE_DIR, "skill_configs.json")
+
+    if not os.path.exists(path):
+        return {}
+
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def load_models():
 
     if not os.path.exists(MODELS_FILE):
         return []
 
-    with open(MODELS_FILE, "r") as f:
+    with open(MODELS_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     models = []
@@ -40,7 +69,11 @@ def load_models():
 
     return models
 
+
 def is_target_model(model_key):
+
+    if "search" in model_key.lower():
+        return False
 
     try:
         provider, model = model_key.split(":")
@@ -57,28 +90,13 @@ def is_target_model(model_key):
     return False
 
 
-def load_cache():
-
-    if os.path.exists(CACHE_FILE):
-        with open(CACHE_FILE, "r") as f:
-            return json.load(f)
-
-    return {"good": [], "bad": []}
-
-
-def save_cache(cache):
-
-    with open(CACHE_FILE, "w") as f:
-        json.dump(cache, f, indent=2)
-
-
 def log_result(data):
 
     logs = []
 
     if os.path.exists(LOG_FILE):
 
-        with open(LOG_FILE, "r") as f:
+        with open(LOG_FILE, "r", encoding="utf-8") as f:
             try:
                 logs = json.load(f)
             except:
@@ -86,7 +104,7 @@ def log_result(data):
 
     logs.append(data)
 
-    with open(LOG_FILE, "w") as f:
+    with open(LOG_FILE, "w", encoding="utf-8") as f:
         json.dump(logs, f, indent=2)
 
 
@@ -106,12 +124,36 @@ def model_priority(model):
 def filter_by_skill(models, skill):
 
     if skill == "coding":
-        return [m for m in models if "code" in m.lower() or "gpt" in m.lower()]
+        return [m for m in models if "gpt" in m.lower() or "claude" in m.lower()]
 
     if skill == "reasoning":
-        return [m for m in models if "deepseek" in m.lower() or "claude" in m.lower()]
+        return [m for m in models if "claude" in m.lower()]
 
     return models
+
+
+def is_bad_response(text):
+
+    t = text.lower()
+
+    if len(t) < 30:
+        return True
+
+    html_signals = [
+        "<html",
+        "<!doctype",
+        "<body",
+        "<head",
+        "cdn.prod.website-files",
+        "<script",
+        "<meta"
+    ]
+
+    for s in html_signals:
+        if s in t:
+            return True
+
+    return False
 
 
 def try_model(model_key, messages):
@@ -119,22 +161,21 @@ def try_model(model_key, messages):
     try:
 
         provider_name, model = model_key.split(":")
-
         provider = getattr(g4f.Provider, provider_name)
 
         r = g4f.ChatCompletion.create(
             model=model,
             provider=provider,
             messages=messages,
-            timeout=20
+            timeout=TIMEOUT
         )
 
         if not r:
             return None
 
-        r = str(r)
+        r = str(r).strip()
 
-        if len(r) < 20:
+        if is_bad_response(r):
             return None
 
         return r
@@ -166,11 +207,36 @@ async def ask_provider(model, messages):
     }
 
 
-async def ask(messages, mode="auto"):
+async def ask(messages, mode="auto", session="default"):
 
     text = messages[-1]["content"]
 
-    skill = detect_skill(text)
+    if text.startswith("/raw"):
+        mode = "raw"
+        text = text.replace("/raw", "", 1).strip()
+        messages[-1]["content"] = text
+
+    history = load_history()
+
+    chat = history.get(session, [])
+
+    chat.extend(messages)
+
+    messages = chat[-20:]
+
+    skill = None
+
+    if mode == "auto":
+        skill = detect_skill(text)
+
+    skill_configs = load_skill_configs()
+
+    config = skill_configs.get(skill, {}) if skill else {}
+
+    system_prompt = config.get("system")
+
+    if system_prompt:
+        messages = [{"role": "system", "content": system_prompt}] + messages
 
     models = load_models()
 
@@ -181,48 +247,61 @@ async def ask(messages, mode="auto"):
 
     models = filter_by_skill(models, skill)
 
-    tasks = []
+    results = []
 
-    for m in models:
+    for i in range(0, len(models), BATCH_SIZE):
 
-        tasks.append(
+        batch = models[i:i+BATCH_SIZE]
+
+        tasks = [
             ask_provider(m, messages)
+            for m in batch
+        ]
+
+        r = await asyncio.gather(
+            *tasks,
+            return_exceptions=True
         )
 
-    results = await asyncio.gather(
-        *tasks,
-        return_exceptions=True
-    )
+        for item in r:
 
-    clean = []
+            if isinstance(item, Exception):
+                continue
+
+            if item:
+                results.append(item)
+
+    if not results:
+        return {"error": "all providers failed"}
 
     for r in results:
 
-        if isinstance(r, Exception):
-            continue
+        latency = max(r["latency"], 0.1)
 
-        if r:
-            clean.append(r)
-
-    if not clean:
-        return {"error": "all providers failed"}
-
-    for r in clean:
-
-        r["score"] = r["length"] / r["latency"]
         r["priority"] = model_priority(r["model"])
 
-    clean.sort(
-        key=lambda x: (x["priority"], x["score"]),
+        r["score"] = (r["length"] / latency) * r["priority"]
+
+    results.sort(
+        key=lambda x: x["score"],
         reverse=True
     )
 
-    best = clean[0]
+    best = results[0]
+
+    chat.append({
+        "role": "assistant",
+        "content": best["response"]
+    })
+
+    history[session] = chat
+
+    save_history(history)
 
     log_result(best)
 
     return {
         "skill": skill,
         "best": best,
-        "alternatives": clean[1:3]
+        "alternatives": results[1:3]
     }
