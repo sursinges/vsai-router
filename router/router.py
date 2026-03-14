@@ -1,234 +1,124 @@
-import g4f
 import json
-import re
-import os
+import random
 import asyncio
-import time
+from pathlib import Path
 
-LOG_FILE = "router/logs.json"
-CACHE_FILE = "router/cache.json"
-MODELS_FILE = "working_models.json"
+import g4f
 
 
-def log_result(data):
+WORKING_MODELS_FILE = Path("working_models.json")
 
-    if not os.path.exists(LOG_FILE):
-        logs = []
-
-    else:
-        try:
-            with open(LOG_FILE, "r") as f:
-                logs = json.load(f)
-        except:
-            logs = []
-
-    logs.append(data)
-
-    with open(LOG_FILE, "w") as f:
-        json.dump(logs, f, indent=2)
-
-
-MODEL_PATTERNS = [
-
-r"claude[^a-z0-9]*opus[^a-z0-9]*4[^a-z0-9]*6",
-r"claude[^a-z0-9]*opus[^a-z0-9]*4[^a-z0-9]*5",
-r"claude[^a-z0-9]*opus[^a-z0-9]*4",
-
-r"gpt[^a-z0-9]*5[^a-z0-9]*4",
-r"gpt[^a-z0-9]*5[^a-z0-9]*3",
-r"gpt[^a-z0-9]*5"
-
-]
-
-
-def normalize_model(name):
-
-    n = name.lower()
-
-    if re.search(r"claude.*opus.*4.*6", n):
-        return "claude-opus-4.6"
-
-    if re.search(r"claude.*opus.*4", n):
-        return "claude-opus-4"
-
-    if re.search(r"gpt.*5.*4", n):
-        return "gpt-5.4"
-
-    if re.search(r"gpt.*5", n):
-        return "gpt-5"
-
-    return name
-
-
-def load_cache():
-
-    if os.path.exists(CACHE_FILE):
-
-        with open(CACHE_FILE,"r") as f:
-            return json.load(f)
-
-    return {"good":[],"bad":[]}
-
-
-def save_cache(cache):
-
-    with open(CACHE_FILE,"w") as f:
-        json.dump(cache,f,indent=2)
+REQUEST_TIMEOUT = 15
 
 
 def load_models():
-
-    if not os.path.exists(MODELS_FILE):
+    if not WORKING_MODELS_FILE.exists():
         return []
 
-    with open(MODELS_FILE,"r") as f:
-        data = json.load(f)
-
-    normalized = []
-
-    for m in data:
-
-        provider = m["provider"]
-        model = normalize_model(m["model"])
-
-        key = f"{provider}:{model}"
-
-        if key not in normalized:
-            normalized.append(key)
-
-    return normalized
+    with open(WORKING_MODELS_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
-def try_model(model_key, prompt):
+def model_variants(name: str):
+    return list({
+        name,
+        name.replace("-", "_"),
+        name.replace("-", "."),
+        name.replace("_", "-"),
+        name.replace("_", "."),
+        name.replace(".", "-"),
+        name.replace(".", "_"),
+    })
+
+
+def is_valid_response(text: str):
+
+    if not text:
+        return False
+
+    text = text.strip()
+
+    if len(text) < 20:
+        return False
+
+    lower = text.lower()
+
+    if "<html" in lower:
+        return False
+
+    if "<!doctype" in lower:
+        return False
+
+    if "error" in lower:
+        return False
+
+    return True
+
+
+async def ask_provider(provider_name, model_name, messages):
 
     try:
 
-        provider_name, model = model_key.split(":")
-
-        blocked = [
-            "CachedSearch",
-            "Browser",
-            "Search",
-            "You",
-            "Bing",
-            "DuckDuckGo"
-        ]
-
-        for b in blocked:
-            if b.lower() in provider_name.lower():
-                print("SKIP SEARCH PROVIDER:", model_key)
-                return None
-
         provider = getattr(g4f.Provider, provider_name)
 
-        r = g4f.ChatCompletion.create(
-            model=model,
-            provider=provider,
-            messages=[{"role": "user", "content": prompt}],
-            timeout=20
+        response = await asyncio.wait_for(
+            g4f.ChatCompletion.create_async(
+                model=model_name,
+                provider=provider,
+                messages=messages
+            ),
+            timeout=REQUEST_TIMEOUT
         )
 
-        if not r:
+        if not is_valid_response(response):
+            print(f"INVALID RESPONSE: {provider_name}:{model_name}")
             return None
 
-        r = str(r)
+        print(f"SUCCESS: {provider_name}:{model_name}")
 
-        if "<html" in r.lower() or "<!doctype" in r.lower():
-            print("HTML RESPONSE:", model_key)
-            return None
+        return {
+            "model": f"{provider_name}:{model_name}",
+            "response": response
+        }
 
-        blocked_phrases = [
-            "important notice",
-            "deprecated",
-            "enable it in your dashboard",
-            "requires 2 requests",
-            "discord.gg",
-            "model not found",
-            "object has no attribute",
-        ]
+    except asyncio.TimeoutError:
 
-        for phrase in blocked_phrases:
-            if phrase in r.lower():
-                print("SERVICE MESSAGE:", model_key)
-                return None
-
-        if len(r) < 20:
-            return None
-
-        return r
-
-    except Exception as e:
-        print("MODEL ERROR:", model_key, e)
-
-    return None
-
-
-async def ask_provider(model, prompt):
-
-    start = time.time()
-
-    r = await asyncio.to_thread(try_model, model, prompt)
-
-    if not r:
+        print(f"TIMEOUT: {provider_name}:{model_name}")
         return None
 
-    latency = time.time() - start
+    except Exception as e:
 
-    return {
-        "model": model,
-        "response": r,
-        "latency": latency,
-        "length": len(r)
-    }
+        print(f"MODEL ERROR: {provider_name}:{model_name} {e}")
+        return None
 
 
-async def ask(prompt):
+async def route_request(messages):
 
-    cache = load_cache()
     models = load_models()
 
     if not models:
-        return {"error": "no models"}
+        return {
+            "model": None,
+            "response": "working_models.json empty"
+        }
 
-    tasks = []
+    random.shuffle(models)
 
-    for m in models:
+    for entry in models:
 
-        if m not in cache["bad"]:
-            tasks.append(ask_provider(m, prompt))
+        provider = entry["provider"]
+        model = entry["model"]
 
-    results = await asyncio.gather(*tasks, return_exceptions=True)
+        variants = model_variants(model)
 
-    clean = []
+        for variant in variants:
 
-    for r in results:
-        if isinstance(r, Exception):
-            continue
-        if r:
-            clean.append(r)
+            result = await ask_provider(provider, variant, messages)
 
-    results = clean
-
-    if not results:
-        return {"error": "all providers failed"}
-
-    for r in results:
-        r["score"] = r["length"] / r["latency"]
-
-    results.sort(key=lambda x: x["score"], reverse=True)
-
-    best = results[0]
-    alternatives = results[1:4]
-
-    cache["good"].append(best["model"])
-    save_cache(cache)
-
-    log_result(best)
-
-    if not best["response"] and alternatives:
-        best = alternatives[0]
+            if result:
+                return result
 
     return {
-        "best": best,
-        "alternatives": alternatives
+        "model": None,
+        "response": "no provider returned valid response"
     }
