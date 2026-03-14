@@ -14,24 +14,18 @@ PATTERNS = {
     "reasoning": [
         r"explain",
         r"why",
-        r"how does",
+        r"how",
         r"reason"
     ],
 
     "translation": [
         r"translate",
         r"переведи"
-    ],
-
-    "chat": [
-        r"hello",
-        r"hi",
-        r"hey"
     ]
 }
 
 
-def detect_skill(text: str):
+def detect_skill(text: str) -> str:
 
     text = text.lower()
 
