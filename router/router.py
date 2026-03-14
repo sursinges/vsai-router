@@ -1,16 +1,29 @@
+from router.skills import detect_skill
 import g4f
 import json
 import asyncio
 import os
 import time
+import re
 
-from router.skills import detect_skill
 
 
-LOG_FILE = "router/logs.json"
-CACHE_FILE = "router/cache.json"
+BASE_DIR = os.path.dirname(__file__)
+
+LOG_FILE = os.path.join(BASE_DIR, "logs.json")
+CACHE_FILE = os.path.join(BASE_DIR, "cache.json")
 MODELS_FILE = "working_models.json"
 
+MODEL_PATTERNS = [
+
+r"claude[^a-z0-9]*opus[^a-z0-9]*4[^a-z0-9]*6",
+r"claude[^a-z0-9]*opus[^a-z0-9]*4[^a-z0-9]*5",
+r"claude[^a-z0-9]*opus[^a-z0-9]*4",
+
+r"gpt[^a-z0-9]*5[^a-z0-9]*4",
+r"gpt[^a-z0-9]*5[^a-z0-9]*3",
+r"gpt[^a-z0-9]*5"
+]
 
 def load_models():
 
@@ -26,6 +39,22 @@ def load_models():
         models.append(f"{m['provider']}:{m['model']}")
 
     return models
+
+def is_target_model(model_key):
+
+    try:
+        provider, model = model_key.split(":")
+    except:
+        model = model_key
+
+    name = model.lower()
+
+    for pattern in MODEL_PATTERNS:
+
+        if re.search(pattern, name):
+            return True
+
+    return False
 
 
 def load_cache():
@@ -144,6 +173,8 @@ async def ask(messages, mode="auto"):
     skill = detect_skill(text)
 
     models = load_models()
+
+    models = [m for m in models if is_target_model(m)]
 
     if not models:
         return {"error": "no models"}

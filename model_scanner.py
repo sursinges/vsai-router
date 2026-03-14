@@ -10,11 +10,11 @@ PATTERNS = {
 TEST_MODELS = [
     "claude-opus-4.6",
     "claude_opus_4_6",
-    "claude.opus.4.6",5
+    "claude.opus.4.6",
     "gpt-5.4",
     "gpt_5_4",
     "gpt.5.4"
-    ]
+  ]
 
 providers = [
     p for p in dir(g4f.Provider)
